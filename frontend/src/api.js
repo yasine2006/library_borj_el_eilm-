@@ -4,6 +4,7 @@
 // ============================================
 
 const BASE_URL = '/api';
+export { BASE_URL };
 
 // Helper: get token from localStorage
 const getToken = () => localStorage.getItem('token');

@@ -1,7 +1,12 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
@@ -12,6 +17,8 @@ import supplierRoutes from './routes/supplier.routes.js';
 import purchaseOrderRoutes from './routes/purchase_order.routes.js';
 import stockRoutes from './routes/stock.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
+import grossisteRoutes from './routes/grossiste.routes.js';
+import { runMigrations } from './config/migrate.js';
 
 dotenv.config();
 
@@ -34,11 +41,21 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/grossistes', grossisteRoutes);
+
+// Serve frontend build in production
+const frontendDist = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) return;
+  res.sendFile(path.join(frontendDist, 'index.html'));
+});
 
 app.get('/', (req, res) => {
   res.json({ message: 'Librairie API - Maroc', version: '1.0.0' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await runMigrations();
   console.log(`Serveur demarre sur http://localhost:${PORT}`);
 });

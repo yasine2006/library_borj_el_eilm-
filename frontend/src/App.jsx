@@ -10,6 +10,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import MyOrdersPage from './pages/MyOrdersPage';
 import InvoicePage from './pages/InvoicePage';
 import ProfilePage from './pages/ProfilePage';
+import RegisterGrossistePage from './pages/RegisterGrossistePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, isAdmin, loading } = useAuth();
@@ -40,6 +43,9 @@ function AppContent() {
         <Route path="/" element={<HomePage cart={cart} setCart={setCart} userType={userType} />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register-grossiste" element={<RegisterGrossistePage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/cart" element={<CartPage cart={cart} setCart={setCart} userType={userType} />} />
         <Route path="/facture/:id" element={
           <ProtectedRoute><InvoicePage /></ProtectedRoute>

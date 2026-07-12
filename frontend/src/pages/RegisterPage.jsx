@@ -61,8 +61,8 @@ export default function RegisterPage() {
                 className={`flex-1 py-3 rounded-xl font-medium transition ${form.user_type === 'retail' ? 'bg-amber-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 👤 Détail
               </button>
-              <button type="button" onClick={() => setForm({...form, user_type: 'wholesale'})}
-                className={`flex-1 py-3 rounded-xl font-medium transition ${form.user_type === 'wholesale' ? 'bg-amber-800 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <button type="button" onClick={() => navigate('/register-grossiste')}
+                className={`flex-1 py-3 rounded-xl font-medium transition bg-gray-100 text-gray-600 hover:bg-gray-200`}>
                 🏢 Grossiste
               </button>
             </div>

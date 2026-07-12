@@ -74,6 +74,18 @@ export const getStats = async (req, res) => {
       ORDER BY month_key ASC
     `);
 
+    // Revenus par année
+    const revenueByYear = await pool.query(`
+      SELECT 
+        EXTRACT(YEAR FROM created_at) as year,
+        COALESCE(SUM(total_amount), 0) as revenue,
+        COUNT(*) as orders_count
+      FROM orders
+      WHERE status = 'delivered'
+      GROUP BY EXTRACT(YEAR FROM created_at)
+      ORDER BY year DESC
+    `);
+
     // Top 5 produits les plus vendus
     const topProducts = await pool.query(`
       SELECT 
@@ -103,6 +115,11 @@ export const getStats = async (req, res) => {
       totalProducts: parseInt(totalProducts.rows[0].count),
       totalOrders: parseInt(totalOrders.rows[0].count),
       totalRevenue: parseFloat(totalRevenue.rows[0].coalesce),
+      revenueByYear: revenueByYear.rows.map(r => ({
+        year: parseInt(r.year),
+        revenue: parseFloat(r.revenue),
+        orders_count: parseInt(r.orders_count)
+      })),
       lowStock: parseInt(lowStock.rows[0].count),
       outOfStock: parseInt(outOfStock.rows[0].count),
       normalStock: parseInt(normalStock.rows[0].count),

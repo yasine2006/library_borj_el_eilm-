@@ -80,6 +80,11 @@ export default function LoginPage() {
               />
             </div>
           </div>
+          <div className="text-right mt-1">
+            <Link to="/forgot-password" className="text-sm text-amber-600 hover:text-amber-700 hover:underline transition">
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <button
             type="submit"
             disabled={loading}
@@ -98,13 +103,6 @@ export default function LoginPage() {
           <p>Pas encore de compte? <Link to="/register" className="text-amber-600 font-medium hover:text-amber-700 transition">S'inscrire</Link></p>
         </div>
 
-        {/* Demo accounts info */}
-        <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-800">
-          <p className="font-bold mb-2">⚠️ Le backend doit être lancé sur :3001</p>
-          <p>Super Admin: admin@librairie.ma</p>
-          <p>Admin: admin2@librairie.ma</p>
-          <p>Mot de passe: admin123</p>
-        </div>
       </div>
     </div>
   );

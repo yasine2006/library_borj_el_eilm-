@@ -4,17 +4,20 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, AlertTriangle,
   DollarSign, XCircle, LogOut, Plus, Edit, Trash2, Search,
   ChevronLeft, ChevronRight, X, RefreshCw, CheckCircle, Loader,
-  Tag, Truck, UserPlus, ClipboardList, ArrowDown
-} from 'lucide-react';
+  Tag,   Truck, UserPlus, ClipboardList, ArrowDown, Store, Upload, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   apiGetProducts, apiCreateProduct, apiUpdateProduct, apiDeleteProduct,
   apiGetOrders, apiUpdateOrderStatus,
-  apiGetUsers, apiDeleteUser, apiCreateAdmin,
+  apiGetUsers, apiDeleteUser,
   apiGetStats,
   apiGetCategories, apiCreateCategory, apiUpdateCategory, apiDeleteCategory,
-  apiGetSuppliers, apiCreateSupplier, apiUpdateSupplier, apiDeleteSupplier, apiGetSupplierDetails,
-  apiGetPurchaseOrders, apiCreatePurchaseOrder, apiUpdatePurchaseOrderStatus, apiDeletePurchaseOrder
+  apiGetSuppliers, apiCreateSupplier, apiUpdateSupplier, apiDeleteSupplier,
+  apiGetSupplierDetails,
+  apiCreateAdmin,
+  apiGetPurchaseOrders, apiCreatePurchaseOrder, apiUpdatePurchaseOrderStatus, apiDeletePurchaseOrder,
+  apiGetStockMovements, apiGetStockSummary, apiAddStock, apiRemoveStock,
+  BASE_URL,
 } from '../api';
 
 // =============================================
@@ -37,9 +40,9 @@ const STATUS_LABELS = {
 // EMPTY PRODUCT FORM
 // =============================================
 const EMPTY_FORM = {
-  name: '', description: '', category_id: '', supplier_id: '',
+  name: '', description: '', reference: '', category_id: '', supplier_id: '',
   barcode: '', price_retail: '', price_wholesale: '',
-  stock: '', min_stock: 5, brand: '', image_url: '', is_active: true
+  stock: '', min_stock: 5, stock_max: 0, brand: '', image_url: '', is_active: true
 };
 
 // =============================================
@@ -95,6 +98,16 @@ export default function AdminDashboard() {
   // ---- SEARCH ----
   const [productSearch, setProductSearch] = useState('');
 
+  // ---- BULK IMPORT ----
+  const [bulkModal, setBulkModal] = useState(false);
+  const [bulkData, setBulkData] = useState('');
+  const [bulkResult, setBulkResult] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // ---- SEARCHED PRODUCTS (API) ----
+  const [searchedProducts, setSearchedProducts] = useState(null);
+  const [searchTimer, setSearchTimer] = useState(null);
+
   // ---- CATEGORIES ----
   const [categories, setCategories] = useState([]);
   const [catModal, setCatModal] = useState(false);
@@ -128,6 +141,12 @@ export default function AdminDashboard() {
   const [poForm, setPoForm] = useState({ supplier_id: '', notes: '', items: [] });
   const [poFormLoading, setPoFormLoading] = useState(false);
 
+  // ---- GROSSISTES ----
+  const [grossistes, setGrossistes] = useState([]);
+  const [grossisteLoading, setGrossisteLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   // =============================================
   // LOADERS
   // =============================================
@@ -145,10 +164,17 @@ export default function AdminDashboard() {
     finally { setLoading(l => ({ ...l, stats: false })); }
   }, []);
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (searchTerm) => {
     setLoading(l => ({ ...l, products: true }));
     try {
-      const data = await apiGetProducts();
+      let data;
+      if (searchTerm) {
+        const res = await fetch(`${BASE_URL}/products?q=${encodeURIComponent(searchTerm)}`);
+        if (!res.ok) throw new Error();
+        data = await res.json();
+      } else {
+        data = await apiGetProducts();
+      }
       setProducts(data);
     } catch { setError('Impossible de charger les produits'); }
     finally { setLoading(l => ({ ...l, products: false })); }
@@ -182,6 +208,7 @@ export default function AdminDashboard() {
     if (activeTab === 'categories') loadCategories();
     if (activeTab === 'suppliers') loadSuppliers();
     if (activeTab === 'purchase-orders') { loadPurchaseOrders(); loadSuppliers(); loadProducts(); }
+    if (activeTab === 'grossistes') loadGrossistes();
   }, [activeTab]);
 
   const loadCategories = async () => {
@@ -209,6 +236,39 @@ export default function AdminDashboard() {
       setPoDetail(data);
     } catch (e) { setError('Erreur: ' + e.message); }
     finally { setPoDetailLoading(false); }
+  };
+
+  // =============================================
+  // GROSSISTES
+  // =============================================
+  const loadGrossistes = async () => {
+    setGrossisteLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/grossistes', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setGrossistes(data);
+    } catch {}
+    finally { setGrossisteLoading(false); }
+  };
+
+  const apiApproveGrossiste = async (id) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/grossistes/${id}/approve`, {
+      method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+  };
+
+  const apiRejectGrossiste = async (id, reason) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/grossistes/${id}/reject`, {
+      method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
   };
 
   const loadSupplierDetail = async (id) => {
@@ -251,10 +311,12 @@ export default function AdminDashboard() {
         category_id: product.category_id || '',
         supplier_id: product.supplier_id || '',
         barcode: product.barcode || '',
+        reference: product.reference || '',
         price_retail: product.price_retail || '',
         price_wholesale: product.price_wholesale || '',
         stock: product.stock || '',
         min_stock: product.min_stock || 5,
+        stock_max: product.stock_max || 0,
         brand: product.brand || '',
         image_url: product.image_url || '',
         is_active: product.is_active !== false
@@ -334,10 +396,13 @@ export default function AdminDashboard() {
   // =============================================
   // FILTERED PRODUCTS
   // =============================================
-  const filteredProducts = products.filter(p =>
+  const displayProducts = searchedProducts || products;
+  const filteredProducts = displayProducts.filter(p =>
+    !productSearch || // if no search, show all (API handles search)
     p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
     p.brand?.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.barcode?.includes(productSearch)
+    p.barcode?.includes(productSearch) ||
+    p.reference?.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   // =============================================
@@ -362,7 +427,6 @@ export default function AdminDashboard() {
                     { label: 'Produits', value: stats.totalProducts, icon: Package, bg: 'bg-amber-50', color: 'text-amber-600' },
                     { label: 'Commandes', value: stats.totalOrders, icon: ShoppingCart, bg: 'bg-green-50', color: 'text-green-600' },
                     { label: 'Clients', value: stats.totalUsers, icon: Users, bg: 'bg-purple-50', color: 'text-purple-600' },
-                    { label: 'Revenus', value: `${parseFloat(stats.totalRevenue||0).toLocaleString('fr-FR')} MAD`, icon: DollarSign, bg: 'bg-blue-50', color: 'text-blue-600' },
                   ].map(({ label, value, icon: Icon, bg, color }) => (
                     <div key={label} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                       <div className="flex items-center justify-between">
@@ -377,6 +441,25 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
+
+                {/* Revenue par Année */}
+                {stats.revenueByYear?.length > 0 && (
+                  <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mt-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <DollarSign className="text-blue-600" size={20} />
+                      <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Revenus par Année</h3>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {stats.revenueByYear.map(ry => (
+                        <div key={ry.year} className="bg-blue-50 rounded-xl p-4 text-center">
+                          <p className="text-xs text-blue-500 font-bold uppercase">{ry.year}</p>
+                          <p className="text-xl font-bold text-blue-700 mt-1">{ry.revenue.toLocaleString('fr-FR')} MAD</p>
+                          <p className="text-xs text-blue-400 mt-0.5">{ry.orders_count} commandes</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -497,8 +580,98 @@ export default function AdminDashboard() {
                           </div>
                         ))}
                       </div>
+            )}
+
+            {/* ── BULK IMPORT MODAL ── */}
+            {bulkModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => e.target === e.currentTarget && setBulkModal(false)}>
+                <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                    <h3 className="text-xl font-bold text-amber-900 flex items-center gap-2">
+                      <Upload size={20} /> Import en masse
+                    </h3>
+                    <button onClick={() => { setBulkModal(false); setBulkResult(null); setBulkData(''); }} className="text-gray-400 hover:text-gray-600 transition"><X size={24} /></button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <p className="text-sm text-gray-500">
+                        Collez vos produits ci-dessous (un produit par ligne). Format <strong>complet</strong> :<br/>
+                        <code className="bg-gray-50 px-2 py-1 rounded text-xs block mt-1 leading-loose">
+                          Nom | Prix Détail | Prix Gros | Stock | Stock Min | Stock Max | Catégorie | Fournisseur | Marque | Code Barre | Référence
+                        </code>
+                        <span className="text-xs text-gray-400 mt-1 block">
+                          💡 Les champs optionnels peuvent être laissés vides (ex: `Nom | 12 | 8 | 50 | 5 | 100 | | | | | `)
+                        </span>
+                      </p>
+                      <textarea value={bulkData} onChange={e => setBulkData(e.target.value)}
+                        rows={10}
+                        placeholder={'Cahier A4 96p | 12.00 | 8.00 | 50 | 5 | 100 | Cahiers | Fournitures Pro | Oxford | 123456 | CAH-001\nStylo Bleu | 3.50 | 2.00 | 200 | 10 | 500 | Stylos | Papeterie du Maroc | Bic | 789012 | STY-001'}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none font-mono text-sm resize-none"
+                    />
+                    <div className="flex gap-3">
+                      <button onClick={async () => {
+                        if (!bulkData.trim()) return;
+                        setBulkLoading(true);
+                        setBulkResult(null);
+                        try {
+                          const lines = bulkData.trim().split('\n').filter(Boolean);
+                          const products = lines.map((line, idx) => {
+                            const parts = line.split('|').map(s => s.trim());
+                            if (parts.length < 3) {
+                              return null; // skip continuation/wrapped lines
+                            }
+                            return {
+                              name: parts[0] || '',
+                              price_retail: parseFloat(parts[1]) || 0,
+                              price_wholesale: parseFloat(parts[2]) || 0,
+                              stock: parseInt(parts[3]) || 0,
+                              min_stock: parseInt(parts[4]) || 0,
+                              stock_max: parseInt(parts[5]) || 0,
+                              category: parts[6] || null,
+                              supplier: parts[7] || null,
+                              brand: parts[8] || null,
+                              barcode: parts[9] || null,
+                              reference: parts[10] || null,
+                            };
+                          }).filter(Boolean).filter(p => p.name);
+                          const token = localStorage.getItem('token');
+                          const res = await fetch(`${BASE_URL}/products/bulk`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                            body: JSON.stringify({ products }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error);
+                          setBulkResult(data);
+                          loadProducts();
+                        } catch (err) {
+                          setError(err.message);
+                        } finally {
+                          setBulkLoading(false);
+                        }
+                      }} disabled={bulkLoading || !bulkData.trim()}
+                        className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold shadow-sm disabled:opacity-60 flex items-center gap-2">
+                        {bulkLoading && <Spinner />}
+                        Importer
+                      </button>
+                      <button onClick={() => setBulkModal(false)} className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition font-medium">
+                        Annuler
+                      </button>
+                    </div>
+                    {bulkResult && (
+                      <div className={`rounded-xl p-4 ${bulkResult.errors?.length > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'}`}>
+                        <p className="font-bold text-sm">{bulkResult.imported} produit(s) importé(s)</p>
+                        {bulkResult.errors?.length > 0 && (
+                          <div className="mt-2 text-sm text-red-600">
+                            {bulkResult.errors.map((e, i) => <p key={i}>⚠️ Ligne {e.ligne}: {e.error}</p>)}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
 
                   {/* Commandes par statut */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -555,9 +728,14 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-amber-900">Gestion des Produits</h2>
-              <button onClick={() => openModal()} className="bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-amber-700 transition shadow-sm">
-                <Plus size={18} /> Ajouter Produit
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setBulkModal(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition shadow-sm text-sm">
+                  <Upload size={16} /> Import en masse
+                </button>
+                <button onClick={() => openModal()} className="bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-amber-700 transition shadow-sm">
+                  <Plus size={18} /> Ajouter Produit
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-amber-100 overflow-hidden">
@@ -566,9 +744,20 @@ export default function AdminDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
-                    placeholder="Rechercher par nom, marque, code barre..."
+                    placeholder="Rechercher par nom, marque, code barre, référence..."
                     value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setProductSearch(v);
+                      if (searchTimer) clearTimeout(searchTimer);
+                      if (v.trim().length >= 2) {
+                        const t = setTimeout(() => loadProducts(v), 400);
+                        setSearchTimer(t);
+                      } else {
+                        setSearchedProducts(null);
+                        if (!v) loadProducts();
+                      }
+                    }}
                     className="w-full pl-10 pr-4 py-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -586,14 +775,14 @@ export default function AdminDashboard() {
                   <table className="w-full">
                     <thead className="bg-amber-50">
                       <tr>
-                        {['Produit', 'Prix Détail', 'Prix Gros', 'Stock', 'Statut', 'Actions'].map(h => (
+                        {['Produit', 'Réf.', 'Catégorie', 'Fournisseur', 'Prix Détail', 'Prix Gros', 'Stock', 'Statut', 'Actions'].map(h => (
                           <th key={h} className="px-6 py-3 text-left text-xs font-bold text-amber-800 uppercase">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-amber-100">
                       {filteredProducts.length === 0 ? (
-                        <tr><td colSpan={6} className="text-center py-12 text-gray-400">Aucun produit trouvé</td></tr>
+                        <tr><td colSpan={9} className="text-center py-12 text-gray-400">Aucun produit trouvé</td></tr>
                       ) : filteredProducts.map(p => (
                         <tr key={p.id} className="hover:bg-amber-50 transition">
                           <td className="px-6 py-4">
@@ -609,15 +798,24 @@ export default function AdminDashboard() {
                               </div>
                             </div>
                           </td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-mono bg-gray-50 px-2 py-1 rounded">
+                              {p.reference || p.barcode || '—'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{p.category_name || '—'}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{p.supplier_name || '—'}</td>
                           <td className="px-6 py-4 font-bold">{parseFloat(p.price_retail || 0).toFixed(2)} MAD</td>
                           <td className="px-6 py-4 text-gray-500">{parseFloat(p.price_wholesale || 0).toFixed(2)} MAD</td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                               p.stock === 0 ? 'bg-red-100 text-red-600' :
                               p.stock <= (p.min_stock || 5) ? 'bg-orange-100 text-orange-600' :
+                              p.stock >= (p.stock_max || 999999) ? 'bg-purple-100 text-purple-600' :
                               'bg-green-100 text-green-600'
-                            }`}>
+                            }`} title={`Stock Max: ${p.stock_max || 'N/A'}`}>
                               {p.stock} / {p.min_stock || 5}
+                              {p.stock_max > 0 && <span className="ml-1 text-xs opacity-70">max {p.stock_max}</span>}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -668,6 +866,13 @@ export default function AdminDashboard() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Code Barre</label>
                         <input type="text" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})}
+                          placeholder="6 premiers chiffres suffisent"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Référence</label>
+                        <input type="text" value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})}
+                          placeholder="REF-001"
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                       </div>
                       <div>
@@ -710,6 +915,11 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Stock Minimum *</label>
                         <input type="number" min="0" value={formData.min_stock} onChange={e => setFormData({...formData, min_stock: e.target.value})}
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Stock Maximum</label>
+                        <input type="number" min="0" value={formData.stock_max} onChange={e => setFormData({...formData, stock_max: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">URL Image</label>
@@ -1397,6 +1607,108 @@ export default function AdminDashboard() {
           </div>
         );
 
+      // ─── GROSSISTES ──────────────────────────────────
+      case 'grossistes': {
+        const pendingG = grossistes.filter(g => g.approval_status === 'pending');
+        const approvedG = grossistes.filter(g => g.approval_status === 'approved');
+        const rejectedG = grossistes.filter(g => g.approval_status === 'rejected');
+        return (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-amber-900">Demandes Grossistes</h2>
+              <div className="flex gap-3">
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-bold">{pendingG.length} en attente</span>
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">{approvedG.length} approuvés</span>
+                <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-bold">{rejectedG.length} refusés</span>
+                <button onClick={loadGrossistes} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                  <RefreshCw size={18} className={grossisteLoading ? 'animate-spin' : ''}/>
+                </button>
+              </div>
+            </div>
+            {grossisteLoading ? (
+              <div className="flex justify-center py-12 text-amber-600"><Spinner /></div>
+            ) : grossistes.length === 0 ? (
+              <div className="bg-white rounded-xl p-12 text-center text-gray-400">
+                <Users size={48} className="mx-auto mb-3 text-gray-200"/>
+                <p>Aucune demande grossiste</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {grossistes.map(g => (
+                  <div key={g.id} className={`bg-white rounded-xl shadow-sm border-l-4 p-5 ${g.approval_status === 'pending' ? 'border-yellow-400' : g.approval_status === 'approved' ? 'border-green-500' : 'border-red-400'}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${g.approval_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : g.approval_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {g.approval_status === 'pending' ? '⏳ En attente' : g.approval_status === 'approved' ? '✅ Approuvé' : '❌ Refusé'}
+                          </span>
+                          <span className="text-xs text-gray-400">{new Date(g.created_at).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs font-bold text-gray-500 uppercase mb-1">👤 Client</p>
+                            <p className="font-bold text-gray-800">{g.first_name} {g.last_name}</p>
+                            <p className="text-sm text-gray-500">{g.email}</p>
+                            <p className="text-sm text-gray-500">📞 {g.phone || '—'}</p>
+                            <p className="text-sm text-gray-500">📍 {g.city || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-500 uppercase mb-1">🏢 المقاولة</p>
+                            <p className="font-bold text-amber-800">{g.company_name || '—'}</p>
+                            {g.rc_number && <p className="text-sm text-gray-500">RC: {g.rc_number}</p>}
+                            {g.estimated_volume && <p className="text-sm text-gray-500">📊 {g.estimated_volume}</p>}
+                            {g.document_path && (
+                              <a href={`${BASE_URL.replace('/api', '')}${g.document_path}`} target="_blank" rel="noreferrer"
+                                className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-200 transition">
+                                📄 Voir le document
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {g.approval_status === 'pending' && (
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <button onClick={async () => {
+                            try { await apiApproveGrossiste(g.id); showSuccess(`${g.first_name} approuvé ✓`); loadGrossistes(); }
+                            catch (e) { setError(e.message); }
+                          }} className="px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 text-sm">
+                            ✅ Approuver
+                          </button>
+                          <button onClick={() => { setRejectModal(g); setRejectReason(''); }}
+                            className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold hover:bg-red-100 text-sm">
+                            ❌ Refuser
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {rejectModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => e.target === e.currentTarget && setRejectModal(null)}>
+                <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+                  <h3 className="text-lg font-bold text-red-700 mb-2">❌ Refuser la demande</h3>
+                  <p className="text-sm text-gray-600 mb-4">Refuser la demande de <strong>{rejectModal.first_name} {rejectModal.last_name}</strong> ({rejectModal.company_name})</p>
+                  <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
+                    placeholder="Raison du refus (optionnel)..."
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-red-400 resize-none text-sm mb-4"/>
+                  <div className="flex gap-3 justify-end">
+                    <button onClick={() => setRejectModal(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Annuler</button>
+                    <button onClick={async () => {
+                      try { await apiRejectGrossiste(rejectModal.id, rejectReason); showSuccess('Demande refusée'); setRejectModal(null); loadGrossistes(); }
+                      catch (e) { setError(e.message); }
+                    }} className="px-5 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 text-sm">
+                      Confirmer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
       default: return null;
     }
   };
@@ -1412,6 +1724,7 @@ export default function AdminDashboard() {
     { id: 'suppliers', icon: Truck, label: 'Fournisseurs', show: isSuperAdmin() },
     { id: 'users', icon: Users, label: 'Utilisateurs', show: isSuperAdmin() },
     { id: 'purchase-orders', icon: ClipboardList, label: 'Bons Commande', show: isSuperAdmin() || true },
+    { id: 'grossistes', icon: Store, label: 'Grossistes', show: isSuperAdmin() },
   ];
 
   return (
@@ -1459,6 +1772,7 @@ export default function AdminDashboard() {
               {activeTab === 'orders' && 'Gestion des Commandes'}
               {activeTab === 'users' && 'Gestion des Utilisateurs'}
               {activeTab === 'purchase-orders' && 'Bons de Commande Fournisseur'}
+              {activeTab === 'grossistes' && 'Demandes Grossistes'}
             </h1>
             <p className="text-xs text-gray-400 mt-0.5">
               {user?.first_name} {user?.last_name}

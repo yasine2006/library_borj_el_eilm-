@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS users (
     user_type VARCHAR(20) DEFAULT 'retail', -- 'retail' = Client Détail, 'wholesale' = Client Grossiste
     role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
+    approval_status VARCHAR(20) DEFAULT 'approved', -- 'pending', 'approved', 'rejected' (for wholesale)
+    rejection_reason TEXT,
+    company_name VARCHAR(255),
+    rc_number VARCHAR(100),
+    estimated_volume VARCHAR(100),
+    document_path VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,7 +50,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- ============================================
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     slug VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     color VARCHAR(20) DEFAULT 'bg-blue-500',
@@ -57,11 +63,12 @@ CREATE TABLE IF NOT EXISTS categories (
 -- ============================================
 CREATE TABLE IF NOT EXISTS suppliers (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
+    name VARCHAR(200) NOT NULL UNIQUE,
     phone VARCHAR(20),
     email VARCHAR(255),
     address TEXT,
     city VARCHAR(100),
+    product_types TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -72,6 +79,7 @@ CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    reference VARCHAR(100),
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
     barcode VARCHAR(50) UNIQUE,
@@ -79,6 +87,7 @@ CREATE TABLE IF NOT EXISTS products (
     price_wholesale DECIMAL(10,2) NOT NULL DEFAULT 0,   -- Prix pour Client Grossiste
     stock INTEGER DEFAULT 0,
     min_stock INTEGER DEFAULT 10,
+    stock_max INTEGER DEFAULT 0,
     brand VARCHAR(100),
     image_url VARCHAR(500),
     is_active BOOLEAN DEFAULT true,
@@ -154,6 +163,34 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 );
 
 -- ============================================
+-- TABLE: purchase_orders
+-- ============================================
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'received', 'cancelled')),
+    total_cost DECIMAL(10,2) DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- TABLE: purchase_order_items
+-- ============================================
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    id SERIAL PRIMARY KEY,
+    purchase_order_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL,
+    unit_cost DECIMAL(10,2) NOT NULL,
+    total_cost DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- DONNÉES DE BASE
 -- ============================================
 
@@ -196,10 +233,44 @@ INSERT INTO products (name, description, category_id, supplier_id, barcode, pric
 ON CONFLICT (barcode) DO NOTHING;
 
 -- ============================================
+-- ADD RESET TOKEN COLUMNS (password reset)
+-- ============================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
+
+-- ============================================
+-- ADD STOCK_MAX COLUMN
+-- ============================================
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_max INTEGER DEFAULT 0;
+
+-- ============================================
+-- MISSING USERS COLUMNS (grossiste registration)
+-- ============================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'approved';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rc_number VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS estimated_volume VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS document_path VARCHAR(500);
+
+-- ============================================
+-- MISSING SUPPLIERS COLUMN
+-- ============================================
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS product_types TEXT;
+
+-- ============================================
+-- UNIQUE CONSTRAINTS for bulk import
+-- ============================================
+ALTER TABLE categories ADD CONSTRAINT IF NOT EXISTS categories_name_key UNIQUE (name);
+ALTER TABLE suppliers ADD CONSTRAINT IF NOT EXISTS suppliers_name_key UNIQUE (name);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_reference ON products(reference);
+CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
