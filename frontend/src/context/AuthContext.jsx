@@ -12,8 +12,13 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
-      // Verify token is still valid
-      apiGetMe().catch(() => {
+      // Verify token + update user data (approval_status etc.)
+      apiGetMe().then(data => {
+        if (data) {
+          localStorage.setItem('user', JSON.stringify(data));
+          setUser(data);
+        }
+      }).catch(() => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
@@ -37,9 +42,11 @@ export const AuthProvider = ({ children }) => {
   const isSuperAdmin = () => user?.role_id === 1;
   const isAdmin = () => user?.role_id === 1 || user?.role_id === 2;
   const isClient = () => user?.role_id === 3;
+  const isGrossistePending = () => user?.user_type === 'wholesale' && user?.approval_status === 'pending';
+  const isGrossisteRejected = () => user?.user_type === 'wholesale' && user?.approval_status === 'rejected';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isSuperAdmin, isAdmin, isClient, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, isSuperAdmin, isAdmin, isClient, isGrossistePending, isGrossisteRejected, loading }}>
       {children}
     </AuthContext.Provider>
   );

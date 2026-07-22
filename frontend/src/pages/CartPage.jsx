@@ -54,8 +54,8 @@ export default function CartPage({ cart, setCart, userType }) {
 
   if (orderSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center bg-white p-10 rounded-2xl shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-choco-light">
+        <div className="text-center bg-choco-cream border border-choco-border p-10 rounded-2xl">
           <CheckCircle size={64} className="mx-auto mb-4 text-green-500" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Commande passée avec succès!</h2>
           <p className="text-gray-500">Redirection en cours...</p>
@@ -66,11 +66,11 @@ export default function CartPage({ cart, setCart, userType }) {
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-choco-light">
         <div className="text-center">
-          <ShoppingCart size={64} className="mx-auto mb-4 text-gray-300" />
-          <h2 className="text-2xl font-bold text-gray-600 mb-2">Votre panier est vide</h2>
-          <Link to="/" className="bg-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-700 transition">
+          <ShoppingCart size={64} className="mx-auto mb-4 text-choco-border" />
+          <h2 className="text-2xl font-bold text-choco-dark/50 mb-2">Votre panier est vide</h2>
+          <Link to="/" className="bg-choco-dark text-choco-light px-6 py-3 rounded-xl font-bold hover:bg-choco-dark/80 transition">
             Continuer les achats
           </Link>
         </div>
@@ -79,7 +79,7 @@ export default function CartPage({ cart, setCart, userType }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-choco-light py-8">
       <div className="max-w-4xl mx-auto px-4">
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
           <ShoppingCart size={28} /> Mon Panier ({cart.length} articles)
@@ -89,7 +89,7 @@ export default function CartPage({ cart, setCart, userType }) {
           {/* Items */}
           <div className="lg:col-span-2 space-y-4">
             {cart.map(item => (
-              <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm flex gap-4">
+              <div key={item.id} className="bg-choco-cream border border-choco-border p-4 rounded-xl flex gap-4">
                 <img
                   src={item.image_url || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=200'}
                   alt={item.name}
@@ -97,14 +97,14 @@ export default function CartPage({ cart, setCart, userType }) {
                 />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{item.name}</h3>
-                  <p className="text-xs text-gray-500">{item.category_name} | {item.brand}</p>
-                  <p className="text-amber-700 font-bold text-lg mt-1">{getPrice(item).toFixed(2)} MAD</p>
+                  <p className="text-xs text-choco-dark/50">{item.category_name} | {item.brand}</p>
+                  <p className="text-choco-dark font-bold text-lg mt-1">{getPrice(item).toFixed(2)} MAD</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <button onClick={() => updateQty(item.id, item.quantity - 1)} className="w-8 h-8 border rounded-lg hover:bg-gray-100 flex items-center justify-center">
+                    <button onClick={() => updateQty(item.id, item.quantity - 1)} className="w-8 h-8 border border-choco-border rounded-lg hover:bg-choco-warm flex items-center justify-center">
                       <Minus size={14} />
                     </button>
-                    <span className="font-bold w-8 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQty(item.id, item.quantity + 1)} className="w-8 h-8 border rounded-lg hover:bg-gray-100 flex items-center justify-center">
+                    <span className="font-bold w-8 text-center text-choco-dark">{item.quantity}</span>
+                    <button onClick={() => updateQty(item.id, item.quantity + 1)} className="w-8 h-8 border border-choco-border rounded-lg hover:bg-choco-warm flex items-center justify-center">
                       <Plus size={14} />
                     </button>
                     <button onClick={() => removeItem(item.id)} className="ml-auto text-red-400 hover:text-red-600">
@@ -119,27 +119,27 @@ export default function CartPage({ cart, setCart, userType }) {
 
           {/* Summary */}
           <div className="space-y-4">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h3 className="font-bold text-lg mb-4">Résumé</h3>
-              <div className="space-y-2 text-sm">
+            <div className="bg-choco-cream border border-choco-border p-6 rounded-xl">
+              <h3 className="font-bold text-lg mb-4 text-choco-dark">Résumé</h3>
+              <div className="space-y-2 text-sm text-choco-dark/70">
                 <div className="flex justify-between"><span>Sous-total</span><span>{total.toFixed(2)} MAD</span></div>
                 <div className="flex justify-between"><span>Livraison</span><span className="text-green-600">Gratuite</span></div>
-                <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                  <span>Total</span><span className="text-amber-700">{total.toFixed(2)} MAD</span>
+                <div className="border-t border-choco-border pt-2 flex justify-between font-bold text-lg">
+                  <span>Total</span><span className="text-choco-dark">{total.toFixed(2)} MAD</span>
                 </div>
               </div>
             </div>
 
             {/* Infos livraison automatiques */}
             {user && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
-                <p className="font-bold text-amber-900 text-sm mb-2">📦 Informations de livraison</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Phone size={14} className="text-amber-600 shrink-0" />
+              <div className="bg-choco-warm border border-choco-border rounded-xl p-4 space-y-2">
+                <p className="font-bold text-choco-dark text-sm mb-2">📦 Informations de livraison</p>
+                <div className="flex items-center gap-2 text-sm text-choco-dark/60">
+                  <Phone size={14} className="text-choco-accent shrink-0" />
                   <span>{user.phone || 'Non renseigné'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin size={14} className="text-amber-600 shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-choco-dark/60">
+                  <MapPin size={14} className="text-choco-accent shrink-0" />
                   <span>{[user.address, user.city].filter(Boolean).join(', ') || 'Non renseignée'}</span>
                 </div>
               </div>
@@ -155,7 +155,7 @@ export default function CartPage({ cart, setCart, userType }) {
               <button
                 onClick={handleOrder}
                 disabled={ordering}
-                className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full bg-choco-dark text-choco-light py-3 rounded-xl font-bold hover:bg-choco-dark/80 transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {ordering
                   ? <><Loader size={18} className="animate-spin" /> En cours...</>
@@ -163,12 +163,12 @@ export default function CartPage({ cart, setCart, userType }) {
                 }
               </button>
             ) : (
-              <Link to="/login" className="block w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition text-center">
+              <Link to="/login" className="block w-full bg-choco-dark text-choco-light py-3 rounded-xl font-bold hover:bg-choco-dark/80 transition text-center">
                 Se connecter pour commander
               </Link>
             )}
 
-            <Link to="/" className="block text-center text-sm text-gray-400 hover:text-amber-600">
+            <Link to="/" className="block text-center text-sm text-choco-dark/40 hover:text-choco-accent">
               Continuer les achats
             </Link>
           </div>

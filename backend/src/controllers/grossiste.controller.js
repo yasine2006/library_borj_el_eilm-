@@ -82,7 +82,7 @@ export const rejectGrossiste = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     await pool.query(
-      "UPDATE users SET approval_status='rejected', rejection_reason=$1 WHERE id=$2",
+      "UPDATE users SET approval_status='rejected', rejection_reason=$1 WHERE id=$2 AND user_type='wholesale'",
       [reason || null, id]
     );
     res.json({ message: 'Grossiste refusé' });

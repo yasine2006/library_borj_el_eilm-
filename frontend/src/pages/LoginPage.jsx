@@ -35,14 +35,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div className="min-h-screen flex items-center justify-center bg-choco-light px-4">
+      <div className="bg-choco-cream border border-choco-border rounded-2xl shadow-sm w-full max-w-md p-8">
         <div className="text-center mb-6">
-          <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User size={32} className="text-amber-600" />
+          <div className="bg-choco-warm w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User size={32} className="text-choco-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">Connexion</h2>
-          <p className="text-gray-500 text-sm mt-1">Connectez-vous à votre compte</p>
+          <h2 className="text-2xl font-bold text-choco-dark">Connexion</h2>
+          <p className="text-choco-dark/50 text-sm mt-1">Connectez-vous à votre compte</p>
         </div>
 
         {error && (
@@ -53,54 +53,54 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-choco-dark/60 mb-1">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-choco-dark/30" size={18} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="votre@email.com"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-3 border border-choco-border rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 bg-choco-cream text-choco-dark placeholder:text-choco-dark/30"
                 required
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+            <label className="block text-sm font-medium text-choco-dark/60 mb-1">Mot de passe</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-choco-dark/30" size={18} />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-3 border border-choco-border rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 bg-choco-cream text-choco-dark placeholder:text-choco-dark/30"
                 required
               />
             </div>
           </div>
           <div className="text-right mt-1">
-            <Link to="/forgot-password" className="text-sm text-amber-600 hover:text-amber-700 hover:underline transition">
+            <Link to="/forgot-password" className="text-sm text-choco-accent hover:text-choco-dark transition">
               Mot de passe oublié ?
             </Link>
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+            className="w-full bg-choco-dark text-choco-light py-3 rounded-xl font-bold hover:bg-choco-dark/80 transition disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-4 h-4 border-2 border-choco-light border-t-transparent rounded-full animate-spin"></span>
                 Connexion...
               </>
             ) : 'Se Connecter'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Pas encore de compte? <Link to="/register" className="text-amber-600 font-medium hover:text-amber-700 transition">S'inscrire</Link></p>
+        <div className="mt-6 text-center text-sm text-choco-dark/50">
+          <p>Pas encore de compte? <Link to="/register" className="text-choco-accent font-medium hover:text-choco-dark transition">S'inscrire</Link></p>
         </div>
 
       </div>

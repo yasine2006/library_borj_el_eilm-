@@ -282,3 +282,78 @@ export const apiRemoveStock = async (body) => {
   const res = await fetch('/api/stock/remove', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
   return handleResponse(res);
 };
+
+// ============================================
+// GROSSISTES
+// ============================================
+export const apiRegisterGrossiste = async (formData) => {
+  const res = await fetch(`${BASE_URL}/grossistes/register`, {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+export const apiGetGrossistes = async () => {
+  const res = await fetch(`${BASE_URL}/grossistes`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+export const apiApproveGrossiste = async (id) => {
+  const res = await fetch(`${BASE_URL}/grossistes/${id}/approve`, {
+    method: 'PUT',
+    headers: authHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+export const apiRejectGrossiste = async (id, reason) => {
+  const res = await fetch(`${BASE_URL}/grossistes/${id}/reject`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ reason })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+// ============================================
+// PURCHASE ORDER DETAIL
+// ============================================
+export const apiGetPurchaseOrderById = async (id) => {
+  const res = await fetch(`${BASE_URL}/purchase-orders/${id}`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+// ============================================
+// ORDER DETAIL
+// ============================================
+export const apiGetOrderById = async (id) => {
+  const res = await fetch(`${BASE_URL}/orders/${id}`, { headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};
+
+// ============================================
+// BULK IMPORT
+// ============================================
+export const apiBulkImport = async (products) => {
+  const res = await fetch(`${BASE_URL}/products/bulk`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ products })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+};

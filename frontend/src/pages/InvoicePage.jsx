@@ -33,7 +33,7 @@ export default function InvoicePage() {
 
   const handlePrint = () => window.print();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-amber-600">Chargement...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-choco-accent">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   if (!order) return null;
 
@@ -54,20 +54,20 @@ export default function InvoicePage() {
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print bg-gray-100 border-b px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+      <div className="no-print bg-choco-cream border-b border-choco-border px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-choco-dark/60 hover:text-choco-dark">
           <ArrowLeft size={18} /> Retour
         </button>
         <div className="flex gap-3">
           <button onClick={handlePrint}
-            className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-amber-700 transition">
+            className="flex items-center gap-2 bg-choco-dark text-choco-light px-4 py-2 rounded-lg font-bold hover:bg-choco-dark/80 transition">
             <Printer size={18} /> Imprimer / Sauvegarder PDF
           </button>
         </div>
       </div>
 
       {/* Invoice */}
-      <div className="min-h-screen bg-gray-200 py-8 px-4">
+      <div className="min-h-screen bg-choco-warm py-8 px-4">
         <div ref={printRef} className="invoice-container bg-white max-w-2xl mx-auto shadow-xl rounded-lg overflow-hidden">
 
           {/* Header */}
@@ -93,8 +93,8 @@ export default function InvoicePage() {
           </div>
 
           {/* Client info */}
-          <div className="px-8 py-5 bg-amber-50 border-b border-amber-100">
-            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-2">Facturé à</p>
+          <div className="px-8 py-5 bg-choco-cream border-b border-choco-border">
+            <p className="text-xs font-bold text-choco-accent uppercase tracking-wide mb-2">Facturé à</p>
             <p className="font-bold text-gray-800">{order.first_name} {order.last_name}</p>
             <p className="text-sm text-gray-600">{order.email}</p>
             {order.phone && <p className="text-sm text-gray-600">📞 {order.phone}</p>}
@@ -147,9 +147,9 @@ export default function InvoicePage() {
           </div>
 
           {/* Footer */}
-          <div className="px-8 py-4 bg-gray-50 border-t text-center">
-            <p className="text-xs text-gray-400">Merci pour votre confiance — Borj El Eilm, Khenifra Maroc</p>
-            <p className="text-xs text-gray-400 mt-1">Document généré automatiquement le {new Date().toLocaleDateString('fr-FR')}</p>
+          <div className="px-8 py-4 bg-choco-cream border-t border-choco-border text-center">
+            <p className="text-xs text-choco-dark/40">Merci pour votre confiance — Borj El Eilm, Khenifra Maroc</p>
+            <p className="text-xs text-choco-dark/40 mt-1">Document généré automatiquement le {new Date().toLocaleDateString('fr-FR')}</p>
           </div>
         </div>
       </div>

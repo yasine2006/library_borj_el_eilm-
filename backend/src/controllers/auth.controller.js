@@ -71,7 +71,10 @@ export const login = async (req, res) => {
         address: user.address,
         city: user.city,
         user_type: user.user_type,
-        role_id: user.role_id
+        role_id: user.role_id,
+        approval_status: user.approval_status || 'approved',
+        company_name: user.company_name,
+        document_path: user.document_path
       } 
     });
   } catch (error) {
@@ -82,7 +85,7 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, first_name, last_name, user_type, role_id, is_active FROM users WHERE id = $1',
+      'SELECT id, email, first_name, last_name, phone, address, city, user_type, role_id, is_active, approval_status, company_name, document_path FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json(result.rows[0]);

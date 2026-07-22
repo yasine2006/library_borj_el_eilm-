@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import GrossistePendingBanner from './components/GrossistePendingBanner';
+import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -28,19 +30,24 @@ function AppContent() {
   const [cart, setCart] = useState([]);
   const [userType, setUserType] = useState('retail');
   const { user } = useAuth();
+  const location = useLocation();
+  const isLanding = location.pathname === '/';
 
-  // Sync userType with logged in user — useEffect bach ma ydir infinite re-render
   useEffect(() => {
-    if (user && user.user_type) setUserType(user.user_type);
+    if (user && user.user_type) {
+      setUserType(user.user_type === 'wholesale' && user.approval_status !== 'approved' ? 'retail' : user.user_type);
+    }
   }, [user]);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar cartCount={cartCount} />
+    <div className="min-h-screen bg-choco-light">
+      {!isLanding && <Navbar cartCount={cartCount} />}
+      <GrossistePendingBanner />
       <Routes>
-        <Route path="/" element={<HomePage cart={cart} setCart={setCart} userType={userType} />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/catalogue" element={<HomePage cart={cart} setCart={setCart} userType={userType} />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register-grossiste" element={<RegisterGrossistePage />} />

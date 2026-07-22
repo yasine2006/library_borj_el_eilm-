@@ -15,7 +15,8 @@ const sqls = [
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'received', 'cancelled')),
     total_cost DECIMAL(10,2) DEFAULT 0, notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    received_at TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS purchase_order_items (
     id SERIAL PRIMARY KEY,
     purchase_order_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
@@ -23,6 +24,9 @@ const sqls = [
     quantity INTEGER NOT NULL, unit_cost DECIMAL(10,2) NOT NULL,
     total_cost DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+  `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS quantity INTEGER`,
+  `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS unit_cost DECIMAL(10,2) DEFAULT 0`,
+  `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS total_cost DECIMAL(10,2) DEFAULT 0`,
 ];
 
 export const runMigrations = async () => {

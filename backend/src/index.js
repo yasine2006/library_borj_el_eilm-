@@ -43,16 +43,16 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/grossistes', grossisteRoutes);
 
+// Serve uploaded files
+const uploadsDir = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsDir));
+
 // Serve frontend build in production
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendDist));
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) return;
   res.sendFile(path.join(frontendDist, 'index.html'));
-});
-
-app.get('/', (req, res) => {
-  res.json({ message: 'Librairie API - Maroc', version: '1.0.0' });
 });
 
 app.listen(PORT, async () => {
