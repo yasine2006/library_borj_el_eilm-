@@ -1,89 +1,106 @@
 import pool from '../config/db.js';
+import { AppError } from '../middleware/error.middleware.js';
 
 // ============================================
-// GET STOCK MOVEMENTS — historique complet
+// GET STOCK MOVEMENTS
 // ============================================
-export const getStockMovements = async (req, res) => {
+export const getStockMovements = async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT 
-        sm.*,
-        p.name as product_name, p.image_url, p.brand, p.stock as current_stock,
+        sm.*, p.name as product_name, p.image_url, p.stock as current_stock, p.brand,
         u.first_name, u.last_name
       FROM stock_movements sm
-      JOIN products p ON sm.product_id = p.id
+      LEFT JOIN products p ON sm.product_id = p.id
       LEFT JOIN users u ON sm.user_id = u.id
       ORDER BY sm.created_at DESC
       LIMIT 200
     `);
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
 // ============================================
 // ADD STOCK — entrée manuelle
 // ============================================
-export const addStock = async (req, res) => {
-  const client = await pool.connect();
+export const addStock = async (req, res, next) => {
+  let client;
   try {
-    await client.query('BEGIN');
     const { product_id, quantity, reason } = req.body;
-    if (!product_id || !quantity || quantity <= 0)
-      throw new Error('Produit et quantité obligatoires');
+    const qty = parseInt(quantity, 10);
+    if (!product_id || !Number.isInteger(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Produit et quantité (entier > 0) obligatoires' });
+    }
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const updated = await client.query(
+      'UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, name, stock',
+      [qty, product_id]
+    );
+    if (updated.rows.length === 0) throw new AppError('Produit introuvable', 404);
 
     await client.query(
-      'UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [quantity, product_id]
-    );
-    await client.query(
       'INSERT INTO stock_movements (product_id, type, quantity, reason, user_id) VALUES ($1, $2, $3, $4, $5)',
-      [product_id, 'in', quantity, reason || 'Ajout manuel', req.user.id]
+      [product_id, 'in', qty, reason || 'Ajout manuel', req.user.id]
     );
-    const updated = await client.query('SELECT id, name, stock FROM products WHERE id = $1', [product_id]);
+
     await client.query('COMMIT');
     res.json({ message: 'Stock ajouté', product: updated.rows[0] });
   } catch (e) {
-    await client.query('ROLLBACK');
-    res.status(400).json({ error: e.message });
-  } finally { client.release(); }
+    if (client) { try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ } }
+    next(e);
+  } finally {
+    if (client) client.release();
+  }
 };
 
 // ============================================
-// REMOVE STOCK — sortie manuelle
+// REMOVE STOCK — sortie manuelle (atomique)
 // ============================================
-export const removeStock = async (req, res) => {
-  const client = await pool.connect();
+export const removeStock = async (req, res, next) => {
+  let client;
   try {
-    await client.query('BEGIN');
     const { product_id, quantity, reason } = req.body;
-    if (!product_id || !quantity || quantity <= 0)
-      throw new Error('Produit et quantité obligatoires');
+    const qty = parseInt(quantity, 10);
+    if (!product_id || !Number.isInteger(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Produit et quantité (entier > 0) obligatoires' });
+    }
 
-    const check = await client.query('SELECT stock, name FROM products WHERE id = $1', [product_id]);
-    if (check.rows[0].stock < quantity)
-      throw new Error(`Stock insuffisant — disponible: ${check.rows[0].stock}`);
+    client = await pool.connect();
+    await client.query('BEGIN');
 
-    await client.query(
-      'UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [quantity, product_id]
+    // Atomique : katn9ess ghir ila stock kafi (ma ykounch race condition)
+    const upd = await client.query(
+      'UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND stock >= $1 RETURNING id, name, stock',
+      [qty, product_id]
     );
+    if (upd.rows.length === 0) {
+      const exists = await client.query('SELECT stock FROM products WHERE id = $1', [product_id]);
+      if (exists.rows.length === 0) throw new AppError('Produit introuvable', 404);
+      throw new AppError(`Stock insuffisant — disponible: ${exists.rows[0].stock}`, 400);
+    }
+
     await client.query(
       'INSERT INTO stock_movements (product_id, type, quantity, reason, user_id) VALUES ($1, $2, $3, $4, $5)',
-      [product_id, 'out', quantity, reason || 'Retrait manuel', req.user.id]
+      [product_id, 'out', qty, reason || 'Retrait manuel', req.user.id]
     );
-    const updated = await client.query('SELECT id, name, stock FROM products WHERE id = $1', [product_id]);
+
     await client.query('COMMIT');
-    res.json({ message: 'Stock retiré', product: updated.rows[0] });
+    res.json({ message: 'Stock retiré', product: upd.rows[0] });
   } catch (e) {
-    await client.query('ROLLBACK');
-    res.status(400).json({ error: e.message });
-  } finally { client.release(); }
+    if (client) { try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ } }
+    next(e);
+  } finally {
+    if (client) client.release();
+  }
 };
 
 // ============================================
-// GET STOCK SUMMARY — par produit
+// GET STOCK SUMMARY
 // ============================================
-export const getStockSummary = async (req, res) => {
+export const getStockSummary = async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -99,5 +116,5 @@ export const getStockSummary = async (req, res) => {
       ORDER BY p.stock ASC
     `);
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };

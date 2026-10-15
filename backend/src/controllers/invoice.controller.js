@@ -1,7 +1,7 @@
 import pool from '../config/db.js';
 import PDFDocument from 'pdfkit';
 
-export const generateInvoice = async (req, res) => {
+export const generateInvoice = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -20,8 +20,8 @@ export const generateInvoice = async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // Check permission: client kan9ra fqt commands dyalou
-    if (req.user.role_id === 3 && order.user_id !== req.user.id)
+    // Check permission: client kaychouf ghir commands dyalou
+    if (req.user.role === 3 && order.user_id !== req.user.id)
       return res.status(403).json({ error: 'Accès refusé' });
 
     const itemsResult = await pool.query(`
@@ -58,8 +58,8 @@ export const generateInvoice = async (req, res) => {
       .fontSize(28).font('Helvetica-Bold')
       .text('FACTURE', 50, 35);
     doc.fontSize(11).font('Helvetica')
-      .text('Borj El Eilm — Librairie Marocaine', 50, 70)
-      .text('Khenifra, Maroc | contact@borjeilm.ma', 50, 87);
+      .text('Library Marocain', 50, 70)
+      .text('Khenifra, Maroc | contact@librarymarocain.ma', 50, 87);
 
     doc.fillColor('#ffffff').fontSize(12).font('Helvetica-Bold')
       .text(order.order_number, 400, 45, { align: 'right' });
@@ -133,12 +133,11 @@ export const generateInvoice = async (req, res) => {
 
     // ── FOOTER ──
     doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
-      .text('Merci pour votre confiance — Borj El Eilm, Khenifra Maroc', 50, 760, { align: 'center' })
+      .text('Merci pour votre confiance — Library Marocain, Khenifra Maroc', 50, 760, { align: 'center' })
       .text('Ce document est généré automatiquement et ne nécessite pas de signature.', 50, 773, { align: 'center' });
 
     doc.end();
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+    next(e);
   }
 };

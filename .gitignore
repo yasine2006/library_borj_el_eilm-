@@ -27,3 +27,8 @@ build/
 
 # Uploads
 backend/uploads/
+.vercel
+
+# Local tools / binaries
+cloudflared.exe
+*.exe

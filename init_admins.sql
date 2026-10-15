@@ -1,6 +1,6 @@
 -- ============================================
 -- Script d'initialisation des comptes admins
--- Borj El Eilm - Exécuter UNE SEULE FOIS
+-- Library Marocain - Exécuter UNE SEULE FOIS
 -- ============================================
 -- Utilisation: psql -U postgres -d librairie_marocaine -f init_admins.sql
 
@@ -9,7 +9,7 @@
 INSERT INTO users (email, password_hash, first_name, last_name, user_type, role_id, is_active)
 VALUES (
   'admin@librairie.ma',
-  '$$2a$10$nww86nkG2sWQCFliHUpL4uYv9XJIFG4GQZE5TV/tzUPZwLitTwiJe',
+  '$2a$10$oQz1llJsZXjGrrrInTYqNuQYKpJJmXqpNv/mx2P7YNVESTGVyjaPy',
   'Super',
   'Admin',
   'retail',
@@ -22,7 +22,7 @@ ON CONFLICT (email) DO UPDATE SET role_id = 1;
 INSERT INTO users (email, password_hash, first_name, last_name, user_type, role_id, is_active)
 VALUES (
   'admin2@librairie.ma',
-  '$$2a$10$nww86nkG2sWQCFliHUpL4uYv9XJIFG4GQZE5TV/tzUPZwLitTwiJe',
+  '$2a$10$oQz1llJsZXjGrrrInTYqNuQYKpJJmXqpNv/mx2P7YNVESTGVyjaPy',
   'Admin',
   'Normal',
   'retail',
@@ -31,10 +31,9 @@ VALUES (
 )
 ON CONFLICT (email) DO UPDATE SET role_id = 2;
 
--- Note: Le hash ci-dessus est le hash bcrypt du mot de passe 'password'
--- Pour créer un vrai hash pour 'admin123', exécutez:
--- node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('admin123', 10).then(h => console.log(h));"
--- Puis remplacez le hash ci-dessus
+-- ⚠️ SÉCURITÉ: changez ces mots de passe par défaut immédiatement après le premier login.
+-- Pour générer un nouveau hash:
+-- node -e "const b=require('bcryptjs'); console.log(b.hashSync('VOTRE_MDP', 10))"
 
 SELECT 'Admins créés avec succès' AS status;
 SELECT id, email, first_name, role_id FROM users WHERE role_id IN (1, 2);

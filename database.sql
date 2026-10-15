@@ -118,6 +118,9 @@ CREATE TABLE IF NOT EXISTS orders (
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'validated', 'preparation', 'shipped', 'delivered', 'cancelled')),
     total_amount DECIMAL(10,2) DEFAULT 0,
     shipping_address TEXT,
+    contact_phone VARCHAR(30),
+    payment_method VARCHAR(30) DEFAULT 'cash_on_delivery',
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -174,7 +177,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     total_cost DECIMAL(10,2) DEFAULT 0,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    received_at TIMESTAMP
 );
 
 -- ============================================
@@ -185,6 +189,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
     purchase_order_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
     quantity INTEGER NOT NULL,
+    quantity_ordered INTEGER,
     unit_cost DECIMAL(10,2) NOT NULL,
     total_cost DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -257,12 +262,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS document_path VARCHAR(500);
 -- MISSING SUPPLIERS COLUMN
 -- ============================================
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS product_types TEXT;
-
--- ============================================
--- UNIQUE CONSTRAINTS for bulk import
--- ============================================
-ALTER TABLE categories ADD CONSTRAINT IF NOT EXISTS categories_name_key UNIQUE (name);
-ALTER TABLE suppliers ADD CONSTRAINT IF NOT EXISTS suppliers_name_key UNIQUE (name);
 
 -- ============================================
 -- INDEXES

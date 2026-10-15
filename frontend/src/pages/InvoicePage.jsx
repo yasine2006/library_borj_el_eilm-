@@ -75,7 +75,7 @@ export default function InvoicePage() {
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-3xl font-bold">FACTURE</h1>
-                <p className="mt-1 opacity-80 text-sm">Borj El Eilm — Librairie Marocaine</p>
+                <p className="mt-1 opacity-80 text-sm">Library Marocain</p>
                 <p className="opacity-70 text-xs">Khenifra, Maroc</p>
               </div>
               <div className="text-right">
@@ -148,7 +148,7 @@ export default function InvoicePage() {
 
           {/* Footer */}
           <div className="px-8 py-4 bg-choco-cream border-t border-choco-border text-center">
-            <p className="text-xs text-choco-dark/40">Merci pour votre confiance — Borj El Eilm, Khenifra Maroc</p>
+            <p className="text-xs text-choco-dark/40">Merci pour votre confiance — Library Marocain, Khenifra Maroc</p>
             <p className="text-xs text-choco-dark/40 mt-1">Document généré automatiquement le {new Date().toLocaleDateString('fr-FR')}</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
 
-export const getAllProducts = async (req, res) => {
+export const getAllProducts = async (req, res, next) => {
   try {
     const { q } = req.query;
     let query = `
@@ -28,11 +28,11 @@ export const getAllProducts = async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const getProductById = async (req, res) => {
+export const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -41,11 +41,11 @@ export const getProductById = async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Produit non trouve' });
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const createProduct = async (req, res) => {
+export const createProduct = async (req, res, next) => {
   try {
     const { name, description, reference, category_id, supplier_id, barcode, price_retail, price_wholesale, stock, min_stock, stock_max, brand, image_url } = req.body;
     const result = await pool.query(
@@ -55,53 +55,64 @@ export const createProduct = async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const updateProduct = async (req, res) => {
+export const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, reference, category_id, supplier_id, barcode, price_retail, price_wholesale, stock, min_stock, stock_max, brand, image_url, is_active } = req.body;
     const result = await pool.query(
       `UPDATE products SET 
-        name = $1, description = $2, reference = $3, category_id = $4, supplier_id = $5,
-        barcode = $6, price_retail = $7, price_wholesale = $8,
-        stock = $9, min_stock = $10, stock_max = $11, brand = $12, image_url = $13,
-        is_active = $14, updated_at = CURRENT_TIMESTAMP
+        name = COALESCE($1, name),
+        description = COALESCE($2, description),
+        reference = COALESCE($3, reference),
+        category_id = COALESCE($4, category_id),
+        supplier_id = COALESCE($5, supplier_id),
+        barcode = COALESCE($6, barcode),
+        price_retail = COALESCE($7, price_retail),
+        price_wholesale = COALESCE($8, price_wholesale),
+        stock = COALESCE($9, stock),
+        min_stock = COALESCE($10, min_stock),
+        stock_max = COALESCE($11, stock_max),
+        brand = COALESCE($12, brand),
+        image_url = COALESCE($13, image_url),
+        is_active = COALESCE($14, is_active),
+        updated_at = CURRENT_TIMESTAMP
        WHERE id = $15 RETURNING *`,
-      [name, description, reference || null, category_id || null, supplier_id || null,
-       barcode || null, price_retail, price_wholesale,
-       stock, min_stock, stock_max || 0, brand, image_url || null,
-       is_active, id]
+      [name || null, description || null, reference || null, category_id || null, supplier_id || null,
+       barcode || null, price_retail ?? null, price_wholesale ?? null,
+       stock ?? null, min_stock ?? null, stock_max ?? null, brand || null, image_url || null,
+       is_active ?? null, id]
     );
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const deleteProduct = async (req, res) => {
+export const deleteProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
     // Soft delete: mark as inactive instead of deleting
     await pool.query('UPDATE products SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
     res.json({ message: 'Produit supprime' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const getLowStock = async (req, res) => {
+export const getLowStock = async (req, res, next) => {
   try {
     const result = await pool.query('SELECT * FROM products WHERE stock <= min_stock AND is_active = true');
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const bulkCreateProducts = async (req, res) => {
+export const bulkCreateProducts = async (req, res, next) => {
   try {
     const { products } = req.body;
     if (!Array.isArray(products) || products.length === 0) {
@@ -162,6 +173,6 @@ export const bulkCreateProducts = async (req, res) => {
 
     res.status(201).json({ imported: results.length, errors, products: results });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

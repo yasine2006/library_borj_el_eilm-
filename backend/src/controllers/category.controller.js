@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
 
-export const getCategories = async (req, res) => {
+export const getCategories = async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT c.*, COUNT(p.id) as products_count
@@ -9,10 +9,10 @@ export const getCategories = async (req, res) => {
       GROUP BY c.id ORDER BY c.name
     `);
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const createCategory = async (req, res) => {
+export const createCategory = async (req, res, next) => {
   try {
     const { name, description, icon } = req.body;
     const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -21,10 +21,10 @@ export const createCategory = async (req, res) => {
       [name, slug, description || null, icon || null]
     );
     res.status(201).json(result.rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const updateCategory = async (req, res) => {
+export const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, icon } = req.body;
@@ -34,10 +34,10 @@ export const updateCategory = async (req, res) => {
       [name, slug, description || null, icon || null, id]
     );
     res.json(result.rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const deleteCategory = async (req, res) => {
+export const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const check = await pool.query('SELECT COUNT(*) FROM products WHERE category_id = $1', [id]);
@@ -45,5 +45,5 @@ export const deleteCategory = async (req, res) => {
       return res.status(400).json({ error: `Impossible de supprimer: ${check.rows[0].count} produits utilisent cette catégorie` });
     await pool.query('DELETE FROM categories WHERE id = $1', [id]);
     res.json({ message: 'Catégorie supprimée' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };

@@ -1,17 +1,17 @@
 import pool from '../config/db.js';
 
-export const getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res, next) => {
   try {
     const result = await pool.query(
       'SELECT id, email, first_name, last_name, phone, user_type, role_id, is_active, created_at FROM users ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const getUserById = async (req, res) => {
+export const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -21,11 +21,11 @@ export const getUserById = async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouve' });
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { first_name, last_name, phone, address, city } = req.body;
@@ -35,21 +35,21 @@ export const updateUser = async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const deleteUser = async (req, res) => {
+export const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
     res.json({ message: 'Utilisateur supprime' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-export const getStats = async (req, res) => {
+export const getStats = async (req, res, next) => {
   try {
     const totalUsers = await pool.query('SELECT COUNT(*) FROM users WHERE role_id = 3');
     const totalAdmins = await pool.query('SELECT COUNT(*) FROM users WHERE role_id IN (1, 2)');
@@ -136,14 +136,14 @@ export const getStats = async (req, res) => {
       ordersByStatus: ordersByStatus.rows
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // ============================================
 // CREATE ADMIN — Super Admin fqt
 // ============================================
-export const createAdmin = async (req, res) => {
+export const createAdmin = async (req, res, next) => {
   try {
     const { email, password, first_name, last_name, phone } = req.body;
     const bcrypt = await import('bcryptjs');
@@ -155,6 +155,6 @@ export const createAdmin = async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    next(e);
   }
 };

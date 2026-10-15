@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Menu, X, BookOpen, PenTool, Briefcase, Sparkles, TrendingUp, Shield, Star, ChevronLeft, ChevronRight, MapPin, Phone, Mail } from 'lucide-react';
+import { apiGetProducts } from '../api';
 
 function useReveal() {
   const ref = useRef(null);
@@ -38,17 +39,8 @@ const categories = [
   { name: 'Art & Créativité', icon: <Sparkles size={24} />, count: '150+' },
 ];
 
-const featuredProducts = [
-  { id: 1, name: 'Cahier 200 pages 17x24', price: '12.90', category: 'Cahiers', rating: 4.8, img: '/landing/cat-notebooks.jpg' },
-  { id: 2, name: 'Lot 10 Stylos Bille Noirs', price: '45.00', category: 'Stylos', rating: 4.9, img: '/landing/cat-pens.jpg' },
-  { id: 3, name: 'Tapis de Souris Ergonomique', price: '35.00', category: 'Bureau', rating: 4.7, img: '/landing/cat-office.jpg' },
-  { id: 4, name: 'Ensemble Feutres 24 Couleurs', price: '68.00', category: 'Art', rating: 4.9, img: '/landing/cat-art.jpg' },
-  { id: 5, name: 'Agenda 2026 A5 Reliure', price: '29.90', category: 'Agendas', rating: 4.6, img: '/landing/cat-notebooks.jpg' },
-  { id: 6, name: 'Lot 50 Feuilles A4 80g', price: '22.00', category: 'Papier', rating: 4.8, img: '/landing/cat-office.jpg' },
-];
-
 const testimonials = [
-  { name: 'Fatima Zahra B.', role: 'Directrice d\'école', text: 'Borj El Eilm est devenu notre fournisseur attitré. Qualité constante et livraisons toujours ponctuelles.', rating: 5 },
+  { name: 'Fatima Zahra B.', role: 'Directrice d\'école', text: 'Library Marocain est devenu notre fournisseur attitré. Qualité constante et livraisons toujours ponctuelles.', rating: 5 },
   { name: 'Mohamed A.', role: 'Grossiste', text: 'Les prix sont très compétitifs et le service client est exceptionnel. Je recommande vivement.', rating: 5 },
   { name: 'Sara M.', role: 'Enseignante', text: 'Je trouve tout ce qu\'il me faut pour ma classe à des prix imbattables. Le gros avantage pour les achats en quantité.', rating: 4 },
 ];
@@ -64,6 +56,15 @@ const navLinks = [
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [featured, setFeatured] = useState([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+  useEffect(() => {
+    apiGetProducts()
+      .then(list => setFeatured((list || []).slice(0, 6)))
+      .catch(() => {})
+      .finally(() => setLoadingFeatured(false));
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTestimonial(p => (p + 1) % testimonials.length), 5000);
@@ -77,7 +78,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-choco-light/90 backdrop-blur-xl border-b border-choco-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-display text-2xl font-bold tracking-tight text-choco-dark hover:text-choco-accent transition">
-            Borj El Eilm
+            Library Marocain
           </Link>
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map(l => (
@@ -219,7 +220,7 @@ export default function LandingPage() {
             <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-6">
               Devenez partenaire
               <br />
-              <span className="text-choco-accent-soft">Borj El Eilm</span>
+              <span className="text-choco-accent-soft">Library Marocain</span>
             </h2>
             <p className="text-choco-light/60 leading-relaxed mb-8">
               Accédez à des tarifs préférentiels, des remises progressives et un service dédié aux professionnels de l'éducation et du bureau.
@@ -275,29 +276,44 @@ export default function LandingPage() {
             </div>
           </RevealSection>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProducts.map((p, i) => (
-              <RevealSection key={p.id} delay={i * 80}>
-                <div className="group bg-choco-cream border border-choco-border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                  <div className="h-48 bg-choco-warm overflow-hidden">
-                    <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                  <div className="p-5">
-                    <p className="text-xs text-choco-accent font-medium mb-1">{p.category}</p>
-                    <h3 className="font-semibold text-choco-dark mb-3 line-clamp-1">{p.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-display text-xl font-bold text-choco-dark">{p.price} MAD</span>
-                        <span className="text-xs text-choco-dark/40 block">TTC</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star size={13} className="fill-choco-accent text-choco-accent" />
-                        <span className="text-xs text-choco-dark/50">{p.rating}</span>
-                      </div>
-                    </div>
+            {loadingFeatured ? (
+              [...Array(6)].map((_, i) => (
+                <div key={i} className="bg-choco-cream border border-choco-border rounded-2xl overflow-hidden animate-pulse">
+                  <div className="h-48 bg-choco-warm" />
+                  <div className="p-5 space-y-2">
+                    <div className="h-2.5 bg-choco-border rounded w-1/3" />
+                    <div className="h-3.5 bg-choco-border rounded w-3/4" />
+                    <div className="h-5 bg-choco-border rounded w-1/2" />
                   </div>
                 </div>
-              </RevealSection>
-            ))}
+              ))
+            ) : featured.length === 0 ? (
+              <p className="col-span-full text-center text-choco-dark/50 py-8">Aucun produit disponible pour le moment.</p>
+            ) : (
+              featured.map((p, i) => (
+                <RevealSection key={p.id} delay={i * 80}>
+                  <Link to="/catalogue" className="group block bg-choco-cream border border-choco-border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                    <div className="h-48 bg-choco-warm overflow-hidden">
+                      <img src={p.image_url || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600'} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    </div>
+                    <div className="p-5">
+                      <p className="text-xs text-choco-accent font-medium mb-1">{p.category_name || 'Général'}</p>
+                      <h3 className="font-semibold text-choco-dark mb-3 line-clamp-1">{p.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-display text-xl font-bold text-choco-dark">{parseFloat(p.price_retail || 0).toFixed(2)} MAD</span>
+                          <span className="text-xs text-choco-dark/40 block">TTC</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star size={13} className="fill-choco-accent text-choco-accent" />
+                          <span className="text-xs text-choco-dark/50">4.8</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </RevealSection>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -344,7 +360,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div>
-              <Link to="/" className="font-display text-2xl font-bold text-choco-light tracking-tight">Borj El Eilm</Link>
+              <Link to="/" className="font-display text-2xl font-bold text-choco-light tracking-tight">Library Marocain</Link>
               <p className="text-sm mt-3 leading-relaxed text-choco-light/40">
                 Votre fournisseur de confiance pour les fournitures scolaires et bureautiques au Maroc.
               </p>
@@ -370,12 +386,12 @@ export default function LandingPage() {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-2"><MapPin size={14} className="text-choco-accent-soft shrink-0" /> Casablanca, Maroc</li>
                 <li className="flex items-center gap-2"><Phone size={14} className="text-choco-accent-soft shrink-0" /> +212 5XX-XXXXXX</li>
-                <li className="flex items-center gap-2"><Mail size={14} className="text-choco-accent-soft shrink-0" /> contact@borjeleilm.ma</li>
+                <li className="flex items-center gap-2"><Mail size={14} className="text-choco-accent-soft shrink-0" /> contact@librarymarocain.ma</li>
               </ul>
             </div>
           </div>
           <div className="border-t border-choco-light/10 pt-8 text-center text-xs text-choco-light/30">
-            &copy; {new Date().getFullYear()} Borj El Eilm. Tous droits réservés.
+            &copy; {new Date().getFullYear()} Library Marocain. Tous droits réservés.
           </div>
         </div>
       </footer>

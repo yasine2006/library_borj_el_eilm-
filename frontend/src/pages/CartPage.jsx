@@ -1,11 +1,24 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, ArrowRight, CheckCircle, Loader, Phone, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, ArrowRight, CheckCircle, Loader, Phone, MapPin, Truck, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiCreateOrder } from '../api';
 
 export default function CartPage({ cart, setCart, userType }) {
   const { user } = useAuth();
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setPhone(user.phone || '');
+      setAddress(user.address || '');
+      setCity(user.city || '');
+    }
+  }, [user]);
   const navigate = useNavigate();
   const [ordering, setOrdering] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -28,19 +41,20 @@ export default function CartPage({ cart, setCart, userType }) {
 
   const handleOrder = async () => {
     if (!user) { navigate('/login'); return; }
+    if (address.trim().length < 5) { setOrderError('Adresse de livraison obligatoire'); return; }
+    if (!phone.trim()) { setOrderError('Numéro de téléphone obligatoire'); return; }
     setOrdering(true);
     setOrderError('');
     try {
-      const shippingAddress = [user.address, user.city].filter(Boolean).join(', ') || 'Maroc';
       await apiCreateOrder({
-        user_id: user.id,
         items: cart.map(item => ({
           product_id: item.id,
           quantity: item.quantity,
-          price: getPrice(item)
         })),
-        total_amount: total,
-        shipping_address: shippingAddress,
+        shipping_address: [address, city].filter(Boolean).join(', '),
+        contact_phone: phone,
+        payment_method: paymentMethod,
+        notes: notes || undefined,
       });
       setOrderSuccess(true);
       setCart([]);
@@ -130,17 +144,45 @@ export default function CartPage({ cart, setCart, userType }) {
               </div>
             </div>
 
-            {/* Infos livraison automatiques */}
+            {/* Infos livraison + paiement */}
             {user && (
-              <div className="bg-choco-warm border border-choco-border rounded-xl p-4 space-y-2">
-                <p className="font-bold text-choco-dark text-sm mb-2">📦 Informations de livraison</p>
-                <div className="flex items-center gap-2 text-sm text-choco-dark/60">
-                  <Phone size={14} className="text-choco-accent shrink-0" />
-                  <span>{user.phone || 'Non renseigné'}</span>
+              <div className="bg-choco-warm border border-choco-border rounded-xl p-4 space-y-3">
+                <p className="font-bold text-choco-dark text-sm">📦 Informations de livraison</p>
+                <div>
+                  <label className="text-xs text-choco-dark/50 font-medium block mb-1">Téléphone *</label>
+                  <div className="relative">
+                    <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-choco-accent" />
+                    <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 XX XX XX XX"
+                      className="w-full pl-9 pr-3 py-2 bg-choco-cream border border-choco-border rounded-lg text-sm text-choco-dark focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-choco-dark/60">
-                  <MapPin size={14} className="text-choco-accent shrink-0" />
-                  <span>{[user.address, user.city].filter(Boolean).join(', ') || 'Non renseignée'}</span>
+                <div>
+                  <label className="text-xs text-choco-dark/50 font-medium block mb-1">Adresse *</label>
+                  <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Adresse, quartier, rue..."
+                    className="w-full px-3 py-2 bg-choco-cream border border-choco-border rounded-lg text-sm text-choco-dark focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+                </div>
+                <div>
+                  <label className="text-xs text-choco-dark/50 font-medium block mb-1">Ville</label>
+                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Ville"
+                    className="w-full px-3 py-2 bg-choco-cream border border-choco-border rounded-lg text-sm text-choco-dark focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+                </div>
+                <div>
+                  <label className="text-xs text-choco-dark/50 font-medium block mb-1">Mode de paiement</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition ${paymentMethod === 'cash_on_delivery' ? 'border-choco-accent bg-choco-cream' : 'border-choco-border'}`}>
+                      <input type="radio" name="pay" value="cash_on_delivery" checked={paymentMethod === 'cash_on_delivery'} onChange={e => setPaymentMethod(e.target.value)} />
+                      💵 Paiement à la livraison
+                    </label>
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition ${paymentMethod === 'bank_transfer' ? 'border-choco-accent bg-choco-cream' : 'border-choco-border'}`}>
+                      <input type="radio" name="pay" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={e => setPaymentMethod(e.target.value)} />
+                      🏦 Virement bancaire
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-choco-dark/50 font-medium block mb-1">Note (optionnel)</label>
+                  <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Instructions de livraison..."
+                    className="w-full px-3 py-2 bg-choco-cream border border-choco-border rounded-lg text-sm text-choco-dark resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
                 </div>
               </div>
             )}

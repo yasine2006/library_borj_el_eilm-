@@ -41,7 +41,7 @@ export default function Navbar({ cartCount }) {
     <nav className="sticky top-0 z-50 bg-choco-light/90 backdrop-blur-xl border-b border-choco-border">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/catalogue" className="font-display text-2xl font-bold tracking-tight text-choco-dark hover:text-choco-accent transition">
-          Borj El Eilm
+          Library Marocain
         </Link>
 
         <div className="hidden md:flex items-center gap-8">

@@ -27,11 +27,21 @@ function ProtectedRoute({ children, adminOnly = false }) {
 }
 
 function AppContent() {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const raw = localStorage.getItem('cart');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  });
   const [userType, setUserType] = useState('retail');
   const { user } = useAuth();
   const location = useLocation();
   const isLanding = location.pathname === '/';
+
+  useEffect(() => {
+    try { localStorage.setItem('cart', JSON.stringify(cart)); } catch { /* ignore */ }
+  }, [cart]);
 
   useEffect(() => {
     if (user && user.user_type) {

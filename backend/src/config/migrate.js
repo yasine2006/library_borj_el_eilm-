@@ -7,6 +7,8 @@ const sqls = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS rc_number VARCHAR(100)`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS estimated_volume VARCHAR(100)`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS document_path VARCHAR(500)`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`,
   `ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS product_types TEXT`,
   `CREATE TABLE IF NOT EXISTS purchase_orders (
     id SERIAL PRIMARY KEY, order_number VARCHAR(50) UNIQUE NOT NULL,
@@ -25,8 +27,13 @@ const sqls = [
     total_cost DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
   `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS quantity INTEGER`,
+  `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS quantity_ordered INTEGER`,
   `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS unit_cost DECIMAL(10,2) DEFAULT 0`,
   `ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS total_cost DECIMAL(10,2) DEFAULT 0`,
+  `ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS received_at TIMESTAMP`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(30)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) DEFAULT 'cash_on_delivery'`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT`,
 ];
 
 export const runMigrations = async () => {

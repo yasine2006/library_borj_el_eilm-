@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
 
-export const getSuppliers = async (req, res) => {
+export const getSuppliers = async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT s.*, COUNT(p.id) as products_count
@@ -11,10 +11,10 @@ export const getSuppliers = async (req, res) => {
     // Convert product_types array
     result.rows = result.rows.map(r => ({ ...r, product_types: r.product_types || [] }));
     res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const createSupplier = async (req, res) => {
+export const createSupplier = async (req, res, next) => {
   try {
     const { name, phone, email, address, city, product_types } = req.body;
     const result = await pool.query(
@@ -22,10 +22,10 @@ export const createSupplier = async (req, res) => {
       [name, phone || null, email || null, address || null, city || null, product_types || []]
     );
     res.status(201).json(result.rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const updateSupplier = async (req, res) => {
+export const updateSupplier = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, phone, email, address, city, product_types } = req.body;
@@ -34,10 +34,10 @@ export const updateSupplier = async (req, res) => {
       [name, phone || null, email || null, address || null, city || null, product_types || [], id]
     );
     res.json(result.rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
-export const deleteSupplier = async (req, res) => {
+export const deleteSupplier = async (req, res, next) => {
   try {
     const { id } = req.params;
     const check = await pool.query('SELECT COUNT(*) FROM products WHERE supplier_id = $1', [id]);
@@ -45,13 +45,13 @@ export const deleteSupplier = async (req, res) => {
       return res.status(400).json({ error: `Impossible de supprimer: ${check.rows[0].count} produits utilisent ce fournisseur` });
     await pool.query('DELETE FROM suppliers WHERE id = $1', [id]);
     res.json({ message: 'Fournisseur supprimé' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };
 
 // ============================================
 // GET SUPPLIER DETAILS — produits + historique
 // ============================================
-export const getSupplierDetails = async (req, res) => {
+export const getSupplierDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -111,5 +111,5 @@ export const getSupplierDetails = async (req, res) => {
         total_revenue: parseFloat(stats.rows[0].total_revenue)
       }
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { next(e); }
 };

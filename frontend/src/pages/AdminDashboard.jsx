@@ -64,7 +64,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab) setActiveTab(tab);
+    if (tab && (tab !== 'purchase-orders' || user?.role_id === 1)) setActiveTab(tab);
   }, [location.search]);
 
   // Listen for admin-tab event (wqt user déjà f /admin)
@@ -271,6 +271,18 @@ export default function AdminDashboard() {
     if (!res.ok) throw new Error(data.error);
   };
 
+  const viewGrossisteDocument = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/grossistes/${id}/document`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Document introuvable');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { setError('Erreur: ' + e.message); }
+  };
+
   const loadSupplierDetail = async (id) => {
     setSupDetailLoading(true);
     try {
@@ -443,7 +455,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Revenue par Année */}
-                {stats.revenueByYear?.length > 0 && (
+                {isSuperAdmin() && stats.revenueByYear?.length > 0 && (
                   <div className="bg-choco-cream p-5 rounded-xl shadow-sm border border-choco-border mt-4">
                     <div className="flex items-center gap-2 mb-4">
                       <DollarSign className="text-blue-600" size={20} />
@@ -465,6 +477,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                   {/* Ventes par mois — bar chart SVG */}
+                  {isSuperAdmin() && (
                   <div className="lg:col-span-2 bg-choco-cream rounded-xl shadow-sm border border-choco-border p-5">
                     <h3 className="font-bold text-choco-dark mb-4">📈 Ventes par mois (MAD)</h3>
                     {(() => {
@@ -505,9 +518,10 @@ export default function AdminDashboard() {
                       );
                     })()}
                   </div>
+                  )}
 
                   {/* Stock status — donut */}
-                  <div className="bg-choco-cream rounded-xl shadow-sm border border-choco-border p-5">
+                  <div className={`bg-choco-cream rounded-xl shadow-sm border border-choco-border p-5 ${isSuperAdmin() ? '' : 'lg:col-span-3'}`}>
                     <h3 className="font-bold text-choco-dark mb-4">📦 État du Stock</h3>
                     {(() => {
                       const normal = stats.normalStock || 0;
@@ -552,9 +566,10 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Top produits + Commandes par statut */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className={`grid grid-cols-1 ${isSuperAdmin() ? 'lg:grid-cols-2' : ''} gap-4`}>
 
                   {/* Top 5 produits */}
+                  {isSuperAdmin() && (
                   <div className="bg-choco-cream rounded-xl shadow-sm border border-choco-border p-5">
                     <h3 className="font-bold text-choco-dark mb-4">🏆 Top 5 Produits Vendus</h3>
                     {(!stats.topProducts || stats.topProducts.length === 0) ? (
@@ -582,6 +597,7 @@ export default function AdminDashboard() {
                       </div>
             )}
           </div>
+                  )}
 
                   {/* Commandes par statut */}
                   <div className="bg-choco-cream rounded-xl shadow-sm border border-choco-border p-5">
@@ -1567,11 +1583,11 @@ export default function AdminDashboard() {
                             <p className="font-bold text-choco-dark">{g.company_name || '—'}</p>
                             {g.rc_number && <p className="text-sm text-choco-dark/50">RC: {g.rc_number}</p>}
                             {g.estimated_volume && <p className="text-sm text-choco-dark/50">📊 {g.estimated_volume}</p>}
-                            {g.document_path && (
-                              <a href={`${BASE_URL.replace('/api', '')}${g.document_path}`} target="_blank" rel="noreferrer"
+                            {g.has_document && (
+                              <button type="button" onClick={() => viewGrossisteDocument(g.id)}
                                 className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 bg-choco-warm text-choco-accent rounded-lg text-xs font-bold hover:bg-choco-warm transition">
                                 📄 Voir le document
-                              </a>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -1633,7 +1649,7 @@ export default function AdminDashboard() {
     { id: 'categories', icon: Tag, label: 'Catégories', show: isSuperAdmin() },
     { id: 'suppliers', icon: Truck, label: 'Fournisseurs', show: isSuperAdmin() },
     { id: 'users', icon: Users, label: 'Utilisateurs', show: isSuperAdmin() },
-    { id: 'purchase-orders', icon: ClipboardList, label: 'Bons Commande', show: isSuperAdmin() || true },
+    { id: 'purchase-orders', icon: ClipboardList, label: 'Bons Commande', show: isSuperAdmin() },
     { id: 'grossistes', icon: Store, label: 'Grossistes', show: isSuperAdmin() },
   ];
 
