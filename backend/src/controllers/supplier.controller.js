@@ -94,7 +94,7 @@ export const getSupplierDetails = async (req, res, next) => {
       FROM orders o
       JOIN order_items oi ON oi.order_id = o.id
       JOIN products p ON oi.product_id = p.id
-      WHERE p.supplier_id = $1 AND o.status = 'delivered'
+      WHERE p.supplier_id = $1 AND o.status IN ('validated', 'preparation', 'shipped', 'delivered')
     `, [id]);
 
     res.json({
