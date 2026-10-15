@@ -49,18 +49,24 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
+// Le chiffre d'affaires ne compte que les commandes CONFIRMEES
+// (validee ou plus loin). Les commandes 'pending' et 'cancelled' sont exclues.
+const REVENUE_STATUSES = `('validated', 'preparation', 'shipped', 'delivered')`;
+
 export const getStats = async (req, res, next) => {
   try {
     const totalUsers = await pool.query('SELECT COUNT(*) FROM users WHERE role_id = 3');
     const totalAdmins = await pool.query('SELECT COUNT(*) FROM users WHERE role_id IN (1, 2)');
     const totalProducts = await pool.query('SELECT COUNT(*) FROM products');
     const totalOrders = await pool.query('SELECT COUNT(*) FROM orders');
-    const totalRevenue = await pool.query("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE status = 'delivered'");
+    const totalRevenue = await pool.query(
+      `SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE status IN ${REVENUE_STATUSES}`
+    );
     const lowStock = await pool.query('SELECT COUNT(*) FROM products WHERE stock <= min_stock AND stock > 0');
     const outOfStock = await pool.query('SELECT COUNT(*) FROM products WHERE stock = 0');
     const normalStock = await pool.query('SELECT COUNT(*) FROM products WHERE stock > min_stock');
 
-    // Ventes par mois (12 derniers mois)
+    // Ventes par mois (12 derniers mois) — commandes confirmees uniquement
     const salesByMonth = await pool.query(`
       SELECT 
         TO_CHAR(created_at, 'Mon YYYY') as month,
@@ -68,25 +74,25 @@ export const getStats = async (req, res, next) => {
         COUNT(*) as orders_count,
         COALESCE(SUM(total_amount), 0) as revenue
       FROM orders
-      WHERE status NOT IN ('cancelled')
+      WHERE status IN ${REVENUE_STATUSES}
         AND created_at >= NOW() - INTERVAL '12 months'
       GROUP BY TO_CHAR(created_at, 'Mon YYYY'), TO_CHAR(created_at, 'YYYY-MM')
       ORDER BY month_key ASC
     `);
 
-    // Revenus par année
+    // Revenus par année — commandes confirmees uniquement
     const revenueByYear = await pool.query(`
       SELECT 
         EXTRACT(YEAR FROM created_at) as year,
         COALESCE(SUM(total_amount), 0) as revenue,
         COUNT(*) as orders_count
       FROM orders
-      WHERE status = 'delivered'
+      WHERE status IN ${REVENUE_STATUSES}
       GROUP BY EXTRACT(YEAR FROM created_at)
       ORDER BY year DESC
     `);
 
-    // Top 5 produits les plus vendus
+    // Top 5 produits les plus vendus — commandes confirmees uniquement
     const topProducts = await pool.query(`
       SELECT 
         p.name,
@@ -96,7 +102,7 @@ export const getStats = async (req, res, next) => {
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.status = 'delivered'
+      WHERE o.status IN ${REVENUE_STATUSES}
       GROUP BY p.id, p.name, p.image_url
       ORDER BY total_sold DESC
       LIMIT 5
